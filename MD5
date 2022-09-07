@@ -1,6 +1,6 @@
-d932a0bd9aaff4b0a516303285159dd8 *DESCRIPTION
+4a4467726f3201e161f5d3cda3a8c659 *DESCRIPTION
 e54a69b9c9e4242733aff8ae6dd9d8d5 *NAMESPACE
-a2e18c2aabb899504e28fa2f5db973a4 *NEWS.md
+1ed832939d6572ebc8f6e119cb13efb6 *NEWS.md
 01181f37f0096bc4bc4541a47e7970e8 *R/browser.R
 37b8ebc04789e468b2d9d7c53bf633b8 *R/callbacks.R
 f1e85772067b4adb420cb3c6ccb60397 *R/chrome.R
@@ -14,12 +14,12 @@ c054800be812e488ab8c3ce6490d204b *R/screenshot.R
 1d35693006349c62549ab920bc8a997b *R/utils.R
 e03440e6692d84f7052ac8f9e86514f6 *R/zzz.R
 34648a68a355bab2c93da793641535b0 *README.md
-b0497fe41ccef1a4be0eb3fe411004fc *man/Browser.Rd
-b9e64616223ac110606a278bda00ebd5 *man/Chrome.Rd
-655f29f982fa324b3ad894291e6e1406 *man/ChromeRemote.Rd
-0d44f40b80fbf716cc86942acf33af42 *man/Chromote.Rd
-8c677091f79d87d604adcab09287ac5d *man/ChromoteSession.Rd
-46bd869bf6cbdc804bf2ebd847df0c56 *man/default_chrome_args.Rd
+0d4b7db10d99a8c2eb812d326de8fc4b *man/Browser.Rd
+cf01bc5b499ad0aa9a67b2059f334d3e *man/Chrome.Rd
+9b6e1e8bbadc63a8d756627a7229980b *man/ChromeRemote.Rd
+04df280d3a68c35dc0b9098e6fb59017 *man/Chromote.Rd
+a08261ed093f5a1a286c1ab883d35362 *man/ChromoteSession.Rd
+828ef649c72b151697c34e709cd2cc23 *man/default_chrome_args.Rd
 b920565870bd922d8177af83cd768f0f *man/default_chromote_object.Rd
 110352f89286c816e0108acf31a74ab9 *man/figures/sidebar.png
 fe6606b37d94e2e1cf6ea6d085c119d9 *man/find_chrome.Rd
