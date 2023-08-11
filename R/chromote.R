@@ -1,12 +1,3 @@
-#' @importFrom websocket WebSocket
-#' @importFrom jsonlite fromJSON toJSON
-#' @importFrom R6 R6Class
-#' @import promises later
-#' @importFrom fastmap fastmap
-#' @importFrom processx process
-NULL
-
-
 #' Chromote class
 #'
 #' This class represents the browser as a whole.
@@ -80,8 +71,12 @@ Chromote <- R6Class(
               promise(function(resolve, reject) {
                 private$ws$onOpen(resolve)
               }),
-              10,
-              timeout_message = "Chromote: timed out waiting for WebSocket connection to browser."
+              timeout = getOption("chromote.timeout", 10),
+              timeout_message = paste0(
+                "Chromote: timed out waiting for WebSocket connection to browser. ",
+                "Use `options(chromote.timeout = ", getOption("chromote.timeout", 10), ")` ",
+                "to increase the timeout."
+              )
             )
           })
 
@@ -285,14 +280,18 @@ Chromote <- R6Class(
     #' @description
     #' Submit debug log message
     #'
-    #' @param ... Arguments pasted together with `paste0(..., collapse = "")`.
-    #' @examples
-    #' \dontrun{b <- ChromoteSession$new()
+    #' ## Examples
+    #'
+    #' ```r
+    #' b <- ChromoteSession$new()
     #' b$parent$debug_messages(TRUE)
     #' b$Page$navigate("https://www.r-project.org/")
     #' #> SEND {"method":"Page.navigate","params":{"url":"https://www.r-project.org/"}| __truncated__}
     #' # Turn off debug messages
-    #' b$parent$debug_messages(FALSE)}
+    #' b$parent$debug_messages(FALSE)
+    #' ```
+    #'
+    #' @param ... Arguments pasted together with `paste0(..., collapse = "")`.
     debug_log = function(...) {
       txt <- truncate(paste0(..., collapse = ""), 1000)
       if (private$debug_messages_) {
@@ -328,8 +327,13 @@ Chromote <- R6Class(
 
     #' @description Close the [`Browser`] object
     close = function() {
-      private$is_active_ <- FALSE
-      self$Browser$close()
+      if (private$is_active_) {
+        self$Browser$close()
+        private$is_active_ <- FALSE
+        return(TRUE)
+      } else {
+        FALSE
+      }
     },
 
     #' @field default_timeout Default timeout in seconds for \pkg{chromote} to

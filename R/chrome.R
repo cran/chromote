@@ -37,66 +37,153 @@ Chrome <- R6Class("Chrome",
 )
 
 #' Find path to Chrome or Chromium browser
+#'
+#' @description
+#' \pkg{chromote} requires a Chrome- or Chromium-based browser with support for
+#' the Chrome DevTools Protocol. There are many such browser variants,
+#' including [Google Chrome](https://www.google.com/chrome/),
+#' [Chromium](https://www.chromium.org/chromium-projects/),
+#' [Microsoft Edge](https://www.microsoft.com/en-us/edge) and others.
+#'
+#' If you want \pkg{chromote} to use a specific browser, set the
+#' `CHROMOTE_CHROME` environment variable to the full path to the browser's
+#' executable. Note that when `CHROMOTE_CHROME` is set, \pkg{chromote} will use
+#' the value without any additional checks. On Mac, for example, one could use
+#' Microsoft Edge by setting `CHROMOTE_CHROME` with the following:
+#'
+#' ```r
+#' Sys.setenv(
+#'   CHROMOTE_CHROME = "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"
+#' )
+#' ```
+#'
+#' When `CHROMOTE_CHROME` is not set, `find_chrome()` will perform a limited
+#' search to find a reasonable executable. On Windows, `find_chrome()` consults
+#' the registry to find `chrome.exe`. On Mac, it looks for `Google Chrome` in
+#' the `/Applications` folder (or tries the same checks as on Linux). On Linux,
+#' it searches for several common executable names.
+#'
+#' @examples
+#' find_chrome()
+#'
+#' @returns A character vector with the value of `CHROMOTE_CHROME`, or a path to
+#'   the discovered Chrome executable. If no path to is found, `find_chrome()`
+#'   returns `NULL`.
+#'
 #' @export
 find_chrome <- function() {
   if (Sys.getenv("CHROMOTE_CHROME") != "") {
     return(Sys.getenv("CHROMOTE_CHROME"))
   }
 
-  path <- NULL
+  path <-
+    if (is_mac()) {
+      inform_if_chrome_not_found(find_chrome_mac())
 
-  if (is_mac()) {
-    path <- "/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome"
+    } else if (is_windows()) {
+      inform_if_chrome_not_found(find_chrome_windows())
 
-  } else if (is_windows()) {
-    tryCatch(
-      {
-        path <- utils::readRegistry("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe\\")
-        path <- path[["(Default)"]]
-      },
-      error = function(e) {
-        message("Error trying to find path to Chrome")
-        path <<- NULL
-      }
-    )
+    } else if (is_linux()) {
+      inform_if_chrome_not_found(
+        find_chrome_linux(),
+        searched_for = "`google-chrome` and `chromium-browser` were",
+        extra_advice = "or adding one of these executables to your PATH"
+      )
 
-  } else if (is_linux()) {
-    path <- Sys.which("google-chrome")
-    if (nchar(path) == 0) {
-      path <- Sys.which("chromium-browser")
+    } else {
+      message("Platform currently not supported")
+      NULL
     }
-    if (nchar(path) == 0) {
-      path <- Sys.which("chromium")
-    }
-    if (nchar(path) == 0) {
-      message("`google-chrome` and `chromium-browser` were not found. Try setting the CHROMOTE_CHROME environment variable or adding one of these executables to your PATH.")
-      path <- NULL
-    }
-
-  } else {
-    message("Platform currently not supported")
-  }
 
   path
 }
 
+find_chrome_windows <- function() {
+  tryCatch(
+    {
+      path <- utils::readRegistry("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\chrome.exe\\")
+      path[["(Default)"]]
+    },
+    error = function(e) {
+      NULL
+    }
+  )
+}
+
+find_chrome_mac <- function() {
+  path_default <- "/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome"
+  if (file.exists(path_default)) {
+    return(path_default)
+  }
+
+  find_chrome_linux()
+}
+
+find_chrome_linux <- function() {
+  possible_names <- c(
+    "google-chrome",
+    "google-chrome-stable",
+    "chromium-browser",
+    "chromium",
+    "google-chrome-beta",
+    "google-chrome-unstable"
+  )
+
+  for (path in possible_names) {
+    path <- Sys.which(path)
+    if (nzchar(path)) {
+      return(path)
+    }
+  }
+
+  NULL
+}
+
+inform_if_chrome_not_found <- function(
+  path,
+  searched_for = "Google Chrome was",
+  extra_advice = ""
+) {
+  if (!is.null(path)) return(invisible(path))
+
+  message(
+    searched_for, " not found. ",
+    "Try setting the `CHROMOTE_CHROME` environment variable to the executable ",
+    "of a Chromium-based browser, such as Google Chrome, Chromium or Brave",
+    if (nzchar(extra_advice)) " ",
+    extra_advice,
+    "."
+  )
+
+  NULL
+}
 
 launch_chrome <- function(path = find_chrome(), args = get_chrome_args()) {
   if (is.null(path)) {
     stop("Invalid path to Chrome")
   }
 
+  res <- with_random_port(launch_chrome_impl, path = path, args = args)
+  res
+}
+
+launch_chrome_impl <- function(path, args, port) {
   p <- process$new(
     command = path,
-    args = c("--headless", "--remote-debugging-port=0", args),
+    args = c(
+      "--headless",
+      paste0("--remote-debugging-port=", port),
+      paste0("--remote-allow-origins=http://127.0.0.1:", port),
+      args
+    ),
     supervise = TRUE,
     stdout = tempfile("chrome-stdout-", fileext = ".log"),
     stderr = tempfile("chrome-stderr-", fileext = ".log")
   )
 
-
   connected <- FALSE
-  end <- Sys.time() + 10
+  timeout <- getOption("chromote.timeout", 10)
+  end <- Sys.time() + timeout
   while (!connected && Sys.time() < end) {
     if (!p$is_alive()) {
       stop(
@@ -111,9 +198,9 @@ launch_chrome <- function(path = find_chrome(), args = get_chrome_args()) {
         output <- output[grepl("^DevTools listening on ws://", output)]
         if (length(output) != 1) stop() # Just break out of the tryCatch
 
-        port <- sub("^DevTools listening on ws://[0-9\\.]+:(\\d+)/.*", "\\1", output)
-        port <- as.integer(port)
-        if (is.na(port)) stop()
+        output_port <- sub("^DevTools listening on ws://[0-9\\.]+:(\\d+)/.*", "\\1", output)
+        output_port <- as.integer(output_port)
+        if (is.na(output_port) || output_port != port) stop()
 
         con <- url(paste0("http://127.0.0.1:", port, "/json/protocol"), "rb")
         if (!isOpen(con)) break  # Failed to connect
@@ -129,7 +216,10 @@ launch_chrome <- function(path = find_chrome(), args = get_chrome_args()) {
   }
 
   if (!connected) {
-    stop("Chrome debugging port not open after 10 seconds.")
+    rlang::abort(
+      paste("Chrome debugging port not open after", timeout, "seconds."),
+      class = "error_stop_port_search"
+    )
   }
 
   list(

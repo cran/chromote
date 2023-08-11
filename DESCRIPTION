@@ -1,30 +1,33 @@
 Package: chromote
 Title: Headless Chrome Web Browser Interface
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: c(
-      person("Winston", "Chang", role = c("aut", "cre"), email = "winston@rstudio.com"),
-      person("Barret", "Schloerke", role = c("aut"), email = "barret@rstudio.com"),
-      person(given = "RStudio", role = c("cph", "fnd"))
-    )
-Description: An implementation of the 'Chrome DevTools Protocol', for controlling a headless Chrome web browser.
+    person("Winston", "Chang", , "winston@posit.co", role = c("aut", "cre")),
+    person("Barret", "Schloerke", , "barret@posit.co", role = "aut",
+           comment = c(ORCID = "0000-0001-9986-114X")),
+    person("Posit Software, PBC", role = c("cph", "fnd"))
+  )
+Description: An implementation of the 'Chrome DevTools Protocol', for
+    controlling a headless Chrome web browser.
 License: GPL-2
+URL: https://rstudio.github.io/chromote/,
+        https://github.com/rstudio/chromote
+BugReports: https://github.com/rstudio/chromote/issues
+Imports: curl, fastmap, jsonlite, later (>= 1.1.0), magrittr, processx,
+        promises (>= 1.1.1), R6, rlang, websocket (>= 1.2.0)
+Suggests: showimage, testthat (>= 3.0.0)
+Config/Needs/website: tidyverse/tidytemplate
+Config/testthat/edition: 3
 Encoding: UTF-8
+Language: en-US
+RoxygenNote: 7.2.3
 SystemRequirements: Google Chrome or other Chromium-based browser.
         chromium: chromium (rpm) or chromium-browser (deb)
-Imports: curl, jsonlite, websocket (>= 1.2.0), processx, R6, later (>=
-        1.1.0), promises (>= 1.1.1), magrittr, rlang, fastmap
-Suggests: testthat (>= 3.0.0), showimage
-RoxygenNote: 7.2.1
-URL: https://github.com/rstudio/chromote
-BugReports: https://github.com/rstudio/chromote/issues
-Config/testthat/edition: 3
-Config/Needs/website: tidyverse/tidytemplate
-Language: en-US
 NeedsCompilation: no
-Packaged: 2022-09-07 13:27:44 UTC; barret
+Packaged: 2023-08-11 20:25:41 UTC; garrick
 Author: Winston Chang [aut, cre],
-  Barret Schloerke [aut],
-  RStudio [cph, fnd]
-Maintainer: Winston Chang <winston@rstudio.com>
+  Barret Schloerke [aut] (<https://orcid.org/0000-0001-9986-114X>),
+  Posit Software, PBC [cph, fnd]
+Maintainer: Winston Chang <winston@posit.co>
 Repository: CRAN
-Date/Publication: 2022-09-07 14:10:02 UTC
+Date/Publication: 2023-08-11 21:43:51 UTC
