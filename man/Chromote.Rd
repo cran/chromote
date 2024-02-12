@@ -4,13 +4,6 @@
 \alias{Chromote}
 \title{Chromote class}
 \description{
-Chromote class
-
-Chromote class
-}
-\details{
-This class represents the browser as a whole.
-
 A \code{Chromote} object represents the browser as a whole, and it can have
 multiple \emph{targets}, which each represent a browser tab. In the Chrome
 DevTools Protocol, each target can have one or more debugging \emph{sessions} to
@@ -44,6 +37,7 @@ wait for a Chrome DevTools Protocol response.}
 \subsection{Public methods}{
 \itemize{
 \item \href{#method-Chromote-new}{\code{Chromote$new()}}
+\item \href{#method-Chromote-connect}{\code{Chromote$connect()}}
 \item \href{#method-Chromote-view}{\code{Chromote$view()}}
 \item \href{#method-Chromote-get_auto_events}{\code{Chromote$get_auto_events()}}
 \item \href{#method-Chromote-get_child_loop}{\code{Chromote$get_child_loop()}}
@@ -57,8 +51,11 @@ wait for a Chrome DevTools Protocol response.}
 \item \href{#method-Chromote-debug_log}{\code{Chromote$debug_log()}}
 \item \href{#method-Chromote-url}{\code{Chromote$url()}}
 \item \href{#method-Chromote-is_active}{\code{Chromote$is_active()}}
+\item \href{#method-Chromote-is_alive}{\code{Chromote$is_alive()}}
+\item \href{#method-Chromote-check_active}{\code{Chromote$check_active()}}
 \item \href{#method-Chromote-get_browser}{\code{Chromote$get_browser()}}
 \item \href{#method-Chromote-close}{\code{Chromote$close()}}
+\item \href{#method-Chromote-print}{\code{Chromote$print()}}
 }
 }
 \if{html}{\out{<hr>}}
@@ -78,6 +75,28 @@ wait for a Chrome DevTools Protocol response.}
 
 \item{\code{auto_events}}{If \code{TRUE}, enable automatic event enabling/disabling;
 if \code{FALSE}, disable automatic event enabling/disabling.}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Chromote-connect"></a>}}
+\if{latex}{\out{\hypertarget{method-Chromote-connect}{}}}
+\subsection{Method \code{connect()}}{
+Re-connect the websocket to the browser. The Chrome browser
+automatically closes websockets when your computer goes to sleep;
+you can use this to bring it back to life with a new connection.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Chromote$connect(multi_session = TRUE, wait_ = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{multi_session}}{Should multiple sessions be allowed?}
+
+\item{\code{wait_}}{If \code{FALSE}, return a promise; if \code{TRUE} wait until
+connection is complete.}
 }
 \if{html}{\out{</div>}}
 }
@@ -323,11 +342,31 @@ Create url for a given path
 \if{html}{\out{<a id="method-Chromote-is_active"></a>}}
 \if{latex}{\out{\hypertarget{method-Chromote-is_active}{}}}
 \subsection{Method \code{is_active()}}{
-Retrieve active status
-Once initialized, the value returned is \code{TRUE}. If \verb{$close()} has been
-called, this value will be \code{FALSE}.
+Is there an active websocket connection to the browser process?
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{Chromote$is_active()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Chromote-is_alive"></a>}}
+\if{latex}{\out{\hypertarget{method-Chromote-is_alive}{}}}
+\subsection{Method \code{is_alive()}}{
+Is the underlying browser process running?
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Chromote$is_alive()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Chromote-check_active"></a>}}
+\if{latex}{\out{\hypertarget{method-Chromote-check_active}{}}}
+\subsection{Method \code{check_active()}}{
+Check that a chromote instance is active and alive.
+Will automatically reconnect if browser process is alive, but
+there's no active web socket connection.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Chromote$check_active()}\if{html}{\out{</div>}}
 }
 
 }
@@ -350,5 +389,26 @@ Close the \code{\link{Browser}} object
 \if{html}{\out{<div class="r">}}\preformatted{Chromote$close()}\if{html}{\out{</div>}}
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-Chromote-print"></a>}}
+\if{latex}{\out{\hypertarget{method-Chromote-print}{}}}
+\subsection{Method \code{print()}}{
+Summarise the current state of the object.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{Chromote$print(..., verbose = FALSE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{...}}{Passed on to \code{format()} when \code{verbose} = TRUE}
+
+\item{\code{verbose}}{The print method defaults to a brief summary
+of the most important debugging info; use \code{verbose = TRUE} tp
+see the complex R6 object.}
+}
+\if{html}{\out{</div>}}
+}
 }
 }

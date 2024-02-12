@@ -1,7 +1,6 @@
 #' Chromote class
 #'
-#' This class represents the browser as a whole.
-#'
+#' @description
 #' A `Chromote` object represents the browser as a whole, and it can have
 #' multiple _targets_, which each represent a browser tab. In the Chrome
 #' DevTools Protocol, each target can have one or more debugging _sessions_ to
@@ -38,16 +37,40 @@ Chromote <- R6Class(
       private$auto_events   <- auto_events
       private$multi_session <- multi_session
 
+      private$command_callbacks <- fastmap()
+
+      # Use a private event loop to drive the websocket
+      private$child_loop <- create_loop(parent = current_loop())
+
+      p <- self$connect(multi_session = multi_session, wait_ = FALSE)
+
+      # Populate methods while the connection is being established.
+      protocol_spec <- jsonlite::fromJSON(self$url("/json/protocol"), simplifyVector = FALSE)
+      self$protocol <- process_protocol(protocol_spec, self$.__enclos_env__)
+      lockBinding("protocol", self)
+      # self$protocol is a list of domains, each of which is a list of
+      # methods. Graft the entries from self$protocol onto self
+      list2env(self$protocol, self)
+
+      private$event_manager <- EventManager$new(self)
+
+      self$wait_for(p)
+
+      private$register_default_event_listeners()
+    },
+
+    #' @description Re-connect the websocket to the browser. The Chrome browser
+    #'   automatically closes websockets when your computer goes to sleep;
+    #'   you can use this to bring it back to life with a new connection.
+    #' @param multi_session Should multiple sessions be allowed?
+    #' @param wait_ If `FALSE`, return a promise; if `TRUE` wait until
+    #'   connection is complete.
+    connect = function(multi_session = TRUE, wait_ = TRUE) {
       if (multi_session) {
         chrome_info <- fromJSON(self$url("/json/version"))
       } else {
         chrome_info <- fromJSON(self$url("/json"))
       }
-
-      private$command_callbacks <- fastmap()
-
-      # Use a private event loop to drive the websocket
-      private$child_loop <- create_loop(parent = current_loop())
 
       with_loop(private$child_loop, {
         private$ws <- WebSocket$new(
@@ -81,23 +104,13 @@ Chromote <- R6Class(
           })
 
         private$ws$connect()
-
-        # Populate methods while the connection is being established.
-        protocol_spec <- jsonlite::fromJSON(self$url("/json/protocol"), simplifyVector = FALSE)
-        self$protocol <- process_protocol(protocol_spec, self$.__enclos_env__)
-        lockBinding("protocol", self)
-
-        # self$protocol is a list of domains, each of which is a list of
-        # methods. Graft the entries from self$protocol onto self
-        list2env(self$protocol, self)
-
-        private$event_manager <- EventManager$new(self)
-        private$is_active_ <- TRUE
-
-        self$wait_for(p)
-
-        private$register_default_event_listeners()
       })
+
+      if (wait_) {
+        invisible(self$wait_for(p))
+      } else {
+        p
+      }
     },
 
     #' @description Display the current session in the `browser`
@@ -160,19 +173,14 @@ Chromote <- R6Class(
     #'   `ChromoteSession` object. Otherwise, block during initialization, and
     #'   return a `ChromoteSession` object directly.
     new_session = function(width = 992, height = 1323, targetId = NULL, wait_ = TRUE) {
-      session <- ChromoteSession$new(self, width, height, targetId, wait_ = FALSE)
-
-      # ChromoteSession$new() always returns the object, but the
-      # initialization is async. To properly wait for initialization, we
-      # need to call b$init_promise() to get the promise; it resolves
-      # after initialization is complete.
-      p <- session$init_promise()
-
-      if (wait_) {
-        self$wait_for(p)
-      } else {
-        p
-      }
+      self$check_active()
+      create_session(
+        chromote = self,
+        width = width,
+        height = height,
+        targetId = targetId,
+        wait_ = wait_
+      )
     },
 
     #' @description Retrieve all [`ChromoteSession`] objects
@@ -205,9 +213,7 @@ Chromote <- R6Class(
     #' @param sessionId Determines which [`ChromoteSession`] with the
     #' corresponding to send the command to.
     send_command = function(msg, callback = NULL, error = NULL, timeout = NULL, sessionId = NULL) {
-      if (!private$is_active_) {
-        stop("Chromote object is closed.")
-      }
+      self$check_active()
 
       private$last_msg_id <- private$last_msg_id + 1
       msg$id <- private$last_msg_id
@@ -312,11 +318,40 @@ Chromote <- R6Class(
       paste0("http://", private$browser$get_host(), ":", private$browser$get_port(), path)
     },
 
-    #' @description Retrieve active status
-    #' Once initialized, the value returned is `TRUE`. If `$close()` has been
-    #' called, this value will be `FALSE`.
+    #' @description
+    #' Is there an active websocket connection to the browser process?
     is_active = function() {
-      private$is_active_
+      self$is_alive() && private$ws$readyState() %in% c(0L, 1L)
+    },
+
+    #' @description
+    #' Is the underlying browser process running?
+    is_alive = function() {
+      private$browser$is_alive()
+    },
+
+    #' @description Check that a chromote instance is active and alive.
+    #'  Will automatically reconnect if browser process is alive, but
+    #'  there's no active web socket connection.
+    check_active = function() {
+      if (!self$is_alive()) {
+        stop("Chromote has been closed.")
+      }
+
+      if (!self$is_active()) {
+        inform(c(
+          "!" = "Reconnecting to chrome process.",
+          i = "All active sessions will be need to be respawned.")
+        )
+        self$connect()
+
+        # Mark all sessions as closed
+        for (session in private$sessions) {
+          session$mark_closed(FALSE)
+        }
+        private$sessions <- list()
+      }
+      invisible(self)
     },
 
     #' @description Retrieve [`Browser`]` object
@@ -327,13 +362,53 @@ Chromote <- R6Class(
 
     #' @description Close the [`Browser`] object
     close = function() {
-      if (private$is_active_) {
-        self$Browser$close()
-        private$is_active_ <- FALSE
-        return(TRUE)
-      } else {
-        FALSE
+      # Must be alive to be active so we cache value before closing process
+      is_active <- self$is_active()
+
+      if (self$is_alive()) {
+        if (is_active) {
+          # send a message to the browser requesting that it close
+          self$Browser$close()
+        } else {
+          # terminate the process
+          private$browser$close()
+        }
       }
+
+      if (is_active) {
+        private$ws$close()
+      }
+
+      invisible()
+    },
+
+    #' @description Summarise the current state of the object.
+    #' @param verbose The print method defaults to a brief summary
+    #'   of the most important debugging info; use `verbose = TRUE` tp
+    #'   see the complex R6 object.
+    #' @param ... Passed on to `format()` when `verbose` = TRUE
+    print = function(..., verbose = FALSE) {
+      if (verbose) {
+        cat(format(self, ...), sep = "\n")
+      } else {
+        if (self$is_active()) {
+          state <- "active + alive"
+        } else if (self$is_alive()) {
+          state <- "alive"
+        } else {
+          state <- "closed"
+        }
+
+        ps <- self$get_browser()$get_process()
+
+        cat_line("<Chromote> (", state, ")")
+        if (self$is_alive()) {
+          cat_line("  URL:  ", self$url())
+          cat_line("  PID:  ", ps$get_pid())
+          cat_line("  Path: ", ps$get_cmdline()[[1]])
+        }
+      }
+      invisible(self)
     },
 
     #' @field default_timeout Default timeout in seconds for \pkg{chromote} to
@@ -346,7 +421,6 @@ Chromote <- R6Class(
   private = list(
     browser = NULL,
     ws = NULL,
-    is_active_ = NULL,
 
     # =========================================================================
     # Browser commands
@@ -392,9 +466,7 @@ Chromote <- R6Class(
     event_manager = NULL,
 
     register_event_listener = function(event, callback = NULL, timeout = NULL) {
-      if (!private$is_active_) {
-        stop("Chromote object is closed.")
-      }
+      self$check_active()
       private$event_manager$register_event_listener(event, callback, timeout)
     },
 
@@ -408,7 +480,7 @@ Chromote <- R6Class(
           return()
 
         private$sessions[[sid]] <- NULL
-        session$mark_closed()
+        session$mark_closed(TRUE)
       })
     },
 
@@ -488,7 +560,7 @@ default_chromote_object <- function() {
 #' @rdname default_chromote_object
 #' @export
 has_default_chromote_object <- function() {
-  !is.null(globals$default_chromote) && globals$default_chromote$is_active()
+  !is.null(globals$default_chromote) && globals$default_chromote$is_alive()
 }
 
 #' @param x A \code{\link{Chromote}} object.
@@ -557,24 +629,26 @@ is_missing_linux_user <- cache_value(function() {
 #' appropriate):
 #'
 #' * [`"--disable-gpu"`](https://peter.sh/experiments/chromium-command-line-switches/#disable-gpu)
-#'   * \verb{Disables GPU hardware acceleration. If software renderer is not in place, then the GPU process won't launch.}
+#'   * Only added on Windows, as empirically it appears to be needed
+#'     (if not, check runs on GHA never terminate).
+#'   * Disables GPU hardware acceleration. If software renderer is not in place, then the GPU process won't launch.
 #' * [`"--no-sandbox"`](https://peter.sh/experiments/chromium-command-line-switches/#no-sandbox)
 #'   * Only added when `CI` system environment variable is set, when the
 #'     user on a Linux system is not set, or when executing inside a Docker container.
-#'   * \verb{Disables the sandbox for all process types that are normally sandboxed. Meant to be used as a browser-level switch for testing purposes only}
+#'   * Disables the sandbox for all process types that are normally sandboxed. Meant to be used as a browser-level switch for testing purposes only
 #' * [`"--disable-dev-shm-usage"`](https://peter.sh/experiments/chromium-command-line-switches/#disable-dev-shm-usage)
 #'   * Only added when `CI` system environment variable is set or when inside a docker instance.
-#'   * \verb{The /dev/shm partition is too small in certain VM environments, causing Chrome to fail or crash}
+#'   * The `/dev/shm` partition is too small in certain VM environments, causing Chrome to fail or crash.
 #' * [`"--force-color-profile=srgb"`](https://peter.sh/experiments/chromium-command-line-switches/#force-color-profile)
 #'   * This means that screenshots taken on a laptop plugged into an external
 #'     monitor will often have subtly different colors than one taken when
 #'     the laptop is using its built-in monitor. This problem will be even
 #'     more likely across machines.
-#'   * \verb{Force all monitors to be treated as though they have the specified color profile.}
+#'   * Force all monitors to be treated as though they have the specified color profile.
 #' * [`"--disable-extensions"`](https://peter.sh/experiments/chromium-command-line-switches/#disable-extensions)
-#'   * \verb{Disable extensions.}
+#'   * Disable extensions.
 #' * [`"--mute-audio"`](https://peter.sh/experiments/chromium-command-line-switches/#mute-audio)
-#'   * \verb{Mutes audio sent to the audio device so it is not audible during automated testing}
+#'   * Mutes audio sent to the audio device so it is not audible during automated testing.
 #'
 #' @return A character vector of default command-line arguments to be used with
 #'   every new [`ChromoteSession`]
@@ -584,8 +658,8 @@ is_missing_linux_user <- cache_value(function() {
 #' @export
 default_chrome_args <- function() {
   c(
-    # Better cross platform support
-    "--disable-gpu",
+    # Empirically, appears to be needed for check runs to terminate on GHA
+    if (is_windows()) "--disable-gpu",
 
     # > Note: --no-sandbox is not needed if you properly setup a user in the container.
     # https://developers.google.com/web/updates/2017/04/headless-chrome
@@ -638,7 +712,7 @@ reset_chrome_args <- function() {
 #' @examples
 #' old_chrome_args <- get_chrome_args()
 #'
-#' # Only disable the gpu and using `/dev/shm`
+#' # Disable the gpu and use of `/dev/shm`
 #' set_chrome_args(c("--disable-gpu", "--disable-dev-shm-usage"))
 #'
 #' #... Make new `Chrome` or `ChromoteSession` instance

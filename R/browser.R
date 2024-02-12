@@ -2,10 +2,12 @@ globals <- new.env()
 
 #' Browser base class
 #'
+#' @description
 #' Base class for browsers like Chrome, Chromium, etc. Defines the interface
 #' used by various browser implementations. It can represent a local browser
 #' process or one running remotely.
 #'
+#' @details
 #' The \code{initialize()} method of an implementation should set private$host
 #' and private$port. If the process is local, the \code{initialize()} method
 #' should also set private$process.
@@ -20,6 +22,9 @@ Browser <- R6Class("Browser",
 
     #' @description Browser process
     get_process = function() private$process,
+
+    #' @description Is the process alive?
+    is_alive = function() private$process$is_alive(),
 
     #' @description Browser Host
     get_host = function() private$host,
