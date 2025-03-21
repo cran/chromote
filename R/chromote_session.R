@@ -40,14 +40,19 @@ ChromoteSession <- R6Class(
     #'
     #' @param parent [`Chromote`] object to use; defaults to
     #'   [default_chromote_object()]
+    #' @param width,height Width and height of the new window in integer pixel
+    #'   values.
+    #' @param wait_ If `FALSE`, return a [promises::promise()] of a new
+    #'   `ChromoteSession` object. Otherwise, block during initialization, and
+    #'   return a `ChromoteSession` object directly.
+    #' @param mobile Whether to emulate mobile device. When `TRUE`, Chrome
+    #'   updates settings to emulate browsing on a mobile phone; this includes
+    #'   viewport meta tag, overlay scrollbars, text autosizing and more. The
+    #'   default is `FALSE`.
     #' @param auto_events If `NULL` (the default), use the `auto_events` setting
     #'   from the parent `Chromote` object. If `TRUE`, enable automatic
     #'   event enabling/disabling; if `FALSE`, disable automatic event
     #'   enabling/disabling.
-    #' @param width,height Width and height of the new window.
-    #' @param wait_ If `FALSE`, return a [promises::promise()] of a new
-    #'   `ChromoteSession` object. Otherwise, block during initialization, and
-    #'   return a `ChromoteSession` object directly.
     #' @return A new `ChromoteSession` object.
     initialize = function(
       parent = default_chromote_object(),
@@ -55,8 +60,15 @@ ChromoteSession <- R6Class(
       height = 1323,
       targetId = NULL,
       wait_ = TRUE,
-      auto_events = NULL
+      auto_events = NULL,
+      mobile = FALSE
     ) {
+      check_number_whole(width)
+      check_number_whole(height)
+      check_logical(auto_events, allow_null = TRUE)
+      check_logical(mobile)
+      check_logical(wait_)
+
       self$parent <- parent
       lockBinding("parent", self) # do not allow `$parent` to be set!
 
@@ -65,19 +77,26 @@ ChromoteSession <- R6Class(
       # Create a session from the Chromote. Basically the same code as
       # new_session(), but this is synchronous.
       if (is.null(targetId)) {
-        p <- parent$Target$createTarget(
-          "about:blank",
-          width = width,
-          height = height,
-          wait_ = FALSE
-        )$then(function(value) {
-          private$target_id <- value$targetId
-          parent$Target$attachToTarget(
-            value$targetId,
-            flatten = TRUE,
-            wait_ = FALSE
-          )
-        })
+        # In earlier versions of chromote (< 0.5.0), we set `width` and `height`
+        # in `Target.createTarget`. With legacy (old) headless mode, each new
+        # session was essentially a tab in a new window. With new headless mode,
+        # introduced with Chrome v128, new tabs are created in existing windows.
+        # For Chrome v128-v133, `width` and `height` in `Target.createTarget`
+        # were ignored completely, and for v134+ they only have an effect when
+        # creating a new window, i.e. for the first ChromoteSession. We now use
+        # `Emulation.setDeviceMetricsOverride` below to set the viewport
+        # dimensions, which works across all versions of Chrome/headless-shell
+        # regardless of the parent window size.
+        p <- parent$Target$createTarget("about:blank", wait_ = FALSE)$then(
+          function(value) {
+            private$target_id <- value$targetId
+            parent$Target$attachToTarget(
+              value$targetId,
+              flatten = TRUE,
+              wait_ = FALSE
+            )
+          }
+        )
       } else {
         private$target_id <- targetId
         p <- parent$Target$attachToTarget(
@@ -112,10 +131,26 @@ ChromoteSession <- R6Class(
 
       # Find pixelRatio for screenshots
       p <- p$then(function(value) {
-        self$Runtime$evaluate("window.devicePixelRatio", wait_ = FALSE)
-      })$then(function(value) {
-        private$pixel_ratio <- value$result$value
+        private$get_pixel_ratio()
       })
+
+      if (is.null(targetId)) {
+        # `Emulation.setDeviceMetricsOverride` is equivalent to turning on
+        # responsive preview in developer tools and lets us adjust the size of
+        # the viewport for the active session. This avoids setting the size of
+        # the parent browser window and ensures that the viewport of the current
+        # tab has dimensions that exactly match the requested `width` and
+        # `height`.
+        p <- p$then(function(value) {
+          self$Emulation$setDeviceMetricsOverride(
+            width = width,
+            height = height,
+            deviceScaleFactor = private$pixel_ratio,
+            mobile = mobile,
+            wait_ = FALSE
+          )
+        })
+      }
 
       # When a target crashes, raise a warning.
       if (!is.null(self$Inspector$targetCrashed)) {
@@ -220,6 +255,93 @@ ChromoteSession <- R6Class(
       } else {
         p
       }
+    },
+
+    #' @description Get the viewport size
+    #'
+    #' @param wait_ If `FALSE`, return a [promises::promise()] of a new
+    #'   `ChromoteSession` object. Otherwise, block during initialization, and
+    #'   return a `ChromoteSession` object directly.
+    #'
+    #' @return Returns a list with values `width`, `height`, `zoom`
+    #'   and `mobile`. See `$set_viewport_size()` for more details.
+    get_viewport_size = function(wait_ = TRUE) {
+      check_bool(wait_)
+
+      p <- self$Page$getLayoutMetrics(wait_ = FALSE)$then(function(value) {
+        list(
+          width = value$cssVisualViewport$clientWidth,
+          height = value$cssVisualViewport$clientHeight
+        )
+      })$then(function(value) {
+        list(
+          width = value$width,
+          height = value$height,
+          zoom = private$pixel_ratio %||% 0,
+          mobile = private$is_mobile
+        )
+      })
+
+      if (wait_) self$wait_for(p) else p
+    },
+
+    #' @description Set the viewport size
+    #'
+    #' Each ChromoteSession is associated with a page that may be one page open
+    #' in a browser window among many. Each page can have its own viewport size,
+    #' that can be thought of like the window size for that page.
+    #'
+    #' This function uses the
+    #' [Emulation.setDeviceMetricsOverride](https://chromedevtools.github.io/devtools-protocol/tot/Emulation/#method-setDeviceMetricsOverride)
+    #' command to set the viewport size. If you need more granular control or
+    #' access to additional settings, use
+    #' `$Emulation$setDeviceMetricsOverride()`.
+    #'
+    #' @param width,height Width and height of the new window in integer pixel
+    #'   values.
+    #' @param zoom The zoom level of displayed content on a device, where a
+    #'   value of 1 indicates normal size, greater than 1 indicates zoomed in,
+    #'   and less than 1 indicates zoomed out.
+    #' @param mobile Whether to emulate mobile device. When `TRUE`, Chrome
+    #'   updates settings to emulate browsing on a mobile phone; this includes
+    #'   viewport meta tag, overlay scrollbars, text autosizing and more. The
+    #'   default is `FALSE`.
+    #' @param wait_ If `FALSE`, return a [promises::promise()] of a new
+    #'   `ChromoteSession` object. Otherwise, block during initialization, and
+    #'   return a `ChromoteSession` object directly.
+    #'
+    #' @return Invisibly returns the previous viewport dimensions so that you
+    #'   can restore the viewport size, if desired.
+    set_viewport_size = function(
+      width,
+      height,
+      zoom = NULL,
+      mobile = NULL,
+      wait_ = TRUE
+    ) {
+      check_number_whole(width)
+      check_number_whole(height)
+      check_number_decimal(zoom, allow_null = TRUE)
+      check_bool(mobile, allow_null = TRUE)
+      check_bool(wait_)
+
+      prev_bounds <- NULL
+
+      p <- self$get_viewport_size(wait_ = FALSE)$then(function(value) {
+        prev_bounds <<- value
+
+        self$Emulation$setDeviceMetricsOverride(
+          width = width,
+          height = height,
+          deviceScaleFactor = zoom %||% private$pixel_ratio %||% 0,
+          mobile = mobile %||% private$is_mobile %||% FALSE,
+          wait_ = FALSE
+        )
+      })$then(function(value) {
+        prev_bounds
+      })
+
+      if (wait_) invisible(self$wait_for(p)) else p
     },
 
     #' @description Take a PNG screenshot
@@ -561,6 +683,43 @@ ChromoteSession <- R6Class(
     },
 
     #' @description
+    #' Set or retrieve the `enable` command arguments for a domain. These
+    #' arguments are used for the `enable` command that is called for a domain,
+    #' e.g. `Fetch$enable()`, when accessing an event method.
+    #'
+    #' @examples
+    #' if (interactive()) {
+    #'   b <- ChromoteSession$new(
+    #'     auto_events_enable_args = list(
+    #'       Fetch = list(handleAuthRequests = TRUE)
+    #'     )
+    #'   )
+    #'
+    #'   # Get current `Fetch.enable` args
+    #'   b$auto_events_enable_args("Fetch")
+    #'
+    #'   # Update the `Fetch.enable` args
+    #'   b$auto_events_enable_args("Fetch", handleAuthRequests = FALSE)
+    #'
+    #'   # Reset `Fetch.enable` args
+    #'   b$auto_events_enable_args("Fetch", NULL)
+    #' }
+    #'
+    #' @param domain A command domain, e.g. `"Fetch"`.
+    #' @param ... Arguments to use for auto-events for the domain. If not
+    #'   provided, returns the argument values currently in place for the
+    #'   domain. Use `NULL` to clear the enable arguments for a domain.
+    auto_events_enable_args = function(domain, ...) {
+      dots <- dots_list(..., .named = TRUE)
+
+      if (length(dots) == 0) {
+        return(get_auto_events_enable_args(private, domain, self$parent))
+      }
+
+      set_auto_events_enable_args(self, private, domain, dots)
+    },
+
+    #' @description
     #' Immediately call all event callback methods.
     #'
     #' For internal use only.
@@ -633,11 +792,20 @@ ChromoteSession <- R6Class(
         cat_line("<ChromoteSession> (", state, ")")
         if (self$is_active()) cat_line("  Session ID: ", self$get_session_id())
         if (private$target_is_active)
-          cat_line("  Target ID:  ", self$get_target_id())
-        cat_line(
-          "  Parent PID: ",
-          self$parent$get_browser()$get_process()$get_pid()
-        )
+          cat_line("   Target ID: ", self$get_target_id())
+
+        browser <- self$parent$get_browser()
+        if (browser$is_local()) {
+          cat_line(
+            "  Parent PID: ",
+            self$parent$get_browser()$get_process()$get_pid()
+          )
+        } else {
+          cat_line(
+            " Remote Host: ",
+            sprintf("http://%s:%s", browser$get_host(), browser$get_port())
+          )
+        }
       }
       invisible(self)
     },
@@ -657,9 +825,24 @@ ChromoteSession <- R6Class(
     session_is_active = NULL,
     target_is_active = NULL,
     event_manager = NULL,
-    pixel_ratio = NULL,
     auto_events = NULL,
     init_promise_ = NULL,
+
+    # Updated when `Emulation.setDeviceMetricsOverride` is called
+    is_mobile = NULL,
+    pixel_ratio = NULL,
+
+    get_pixel_ratio = function() {
+      if (!is.null(private$pixel_ratio)) {
+        promise_resolve(private$pixel_ratio)
+      } else {
+        self$Runtime$evaluate("window.devicePixelRatio", wait_ = FALSE)$then(
+          function(value) {
+            (private$pixel_ratio <- value$result$value)
+          }
+        )
+      }
+    },
 
     register_event_listener = function(event, callback = NULL, timeout = NULL) {
       self$check_active()

@@ -11,6 +11,30 @@ which is a browser window/tab or an iframe.
 A single target can potentially have more than one session connected to it,
 but this is not currently supported by chromote.
 }
+\examples{
+
+## ------------------------------------------------
+## Method `ChromoteSession$auto_events_enable_args`
+## ------------------------------------------------
+
+if (interactive()) {
+  b <- ChromoteSession$new(
+    auto_events_enable_args = list(
+      Fetch = list(handleAuthRequests = TRUE)
+    )
+  )
+
+  # Get current `Fetch.enable` args
+  b$auto_events_enable_args("Fetch")
+
+  # Update the `Fetch.enable` args
+  b$auto_events_enable_args("Fetch", handleAuthRequests = FALSE)
+
+  # Reset `Fetch.enable` args
+  b$auto_events_enable_args("Fetch", NULL)
+}
+
+}
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
 \describe{
@@ -29,6 +53,8 @@ wait for a Chrome DevTools Protocol response.}
 \item \href{#method-ChromoteSession-new}{\code{ChromoteSession$new()}}
 \item \href{#method-ChromoteSession-view}{\code{ChromoteSession$view()}}
 \item \href{#method-ChromoteSession-close}{\code{ChromoteSession$close()}}
+\item \href{#method-ChromoteSession-get_viewport_size}{\code{ChromoteSession$get_viewport_size()}}
+\item \href{#method-ChromoteSession-set_viewport_size}{\code{ChromoteSession$set_viewport_size()}}
 \item \href{#method-ChromoteSession-screenshot}{\code{ChromoteSession$screenshot()}}
 \item \href{#method-ChromoteSession-screenshot_pdf}{\code{ChromoteSession$screenshot_pdf()}}
 \item \href{#method-ChromoteSession-new_session}{\code{ChromoteSession$new_session()}}
@@ -40,6 +66,7 @@ wait for a Chrome DevTools Protocol response.}
 \item \href{#method-ChromoteSession-get_child_loop}{\code{ChromoteSession$get_child_loop()}}
 \item \href{#method-ChromoteSession-send_command}{\code{ChromoteSession$send_command()}}
 \item \href{#method-ChromoteSession-get_auto_events}{\code{ChromoteSession$get_auto_events()}}
+\item \href{#method-ChromoteSession-auto_events_enable_args}{\code{ChromoteSession$auto_events_enable_args()}}
 \item \href{#method-ChromoteSession-invoke_event_callbacks}{\code{ChromoteSession$invoke_event_callbacks()}}
 \item \href{#method-ChromoteSession-mark_closed}{\code{ChromoteSession$mark_closed()}}
 \item \href{#method-ChromoteSession-is_active}{\code{ChromoteSession$is_active()}}
@@ -75,7 +102,8 @@ if (interactive()) b$view()
   height = 1323,
   targetId = NULL,
   wait_ = TRUE,
-  auto_events = NULL
+  auto_events = NULL,
+  mobile = FALSE
 )}\if{html}{\out{</div>}}
 }
 
@@ -85,7 +113,8 @@ if (interactive()) b$view()
 \item{\code{parent}}{\code{\link{Chromote}} object to use; defaults to
 \code{\link[=default_chromote_object]{default_chromote_object()}}}
 
-\item{\code{width, height}}{Width and height of the new window.}
+\item{\code{width, height}}{Width and height of the new window in integer pixel
+values.}
 
 \item{\code{targetId}}{\href{https://chromedevtools.github.io/devtools-protocol/tot/Target/}{Target}
 ID of an existing target to attach to. When a \code{targetId} is provided, the
@@ -101,6 +130,11 @@ return a \code{ChromoteSession} object directly.}
 from the parent \code{Chromote} object. If \code{TRUE}, enable automatic
 event enabling/disabling; if \code{FALSE}, disable automatic event
 enabling/disabling.}
+
+\item{\code{mobile}}{Whether to emulate mobile device. When \code{TRUE}, Chrome
+updates settings to emulate browsing on a mobile phone; this includes
+viewport meta tag, overlay scrollbars, text autosizing and more. The
+default is \code{FALSE}.}
 }
 \if{html}{\out{</div>}}
 }
@@ -163,6 +197,80 @@ when the \code{ChromoteSession} is closed. Otherwise, block until the
 \code{ChromoteSession} has closed.}
 }
 \if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChromoteSession-get_viewport_size"></a>}}
+\if{latex}{\out{\hypertarget{method-ChromoteSession-get_viewport_size}{}}}
+\subsection{Method \code{get_viewport_size()}}{
+Get the viewport size
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChromoteSession$get_viewport_size(wait_ = TRUE)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{wait_}}{If \code{FALSE}, return a \code{\link[promises:promise]{promises::promise()}} of a new
+\code{ChromoteSession} object. Otherwise, block during initialization, and
+return a \code{ChromoteSession} object directly.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Returns a list with values \code{width}, \code{height}, \code{zoom}
+and \code{mobile}. See \verb{$set_viewport_size()} for more details.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChromoteSession-set_viewport_size"></a>}}
+\if{latex}{\out{\hypertarget{method-ChromoteSession-set_viewport_size}{}}}
+\subsection{Method \code{set_viewport_size()}}{
+Set the viewport size
+
+Each ChromoteSession is associated with a page that may be one page open
+in a browser window among many. Each page can have its own viewport size,
+that can be thought of like the window size for that page.
+
+This function uses the
+\href{https://chromedevtools.github.io/devtools-protocol/tot/Emulation/#method-setDeviceMetricsOverride}{Emulation.setDeviceMetricsOverride}
+command to set the viewport size. If you need more granular control or
+access to additional settings, use
+\verb{$Emulation$setDeviceMetricsOverride()}.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChromoteSession$set_viewport_size(
+  width,
+  height,
+  zoom = NULL,
+  mobile = NULL,
+  wait_ = TRUE
+)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{width, height}}{Width and height of the new window in integer pixel
+values.}
+
+\item{\code{zoom}}{The zoom level of displayed content on a device, where a
+value of 1 indicates normal size, greater than 1 indicates zoomed in,
+and less than 1 indicates zoomed out.}
+
+\item{\code{mobile}}{Whether to emulate mobile device. When \code{TRUE}, Chrome
+updates settings to emulate browsing on a mobile phone; this includes
+viewport meta tag, overlay scrollbars, text autosizing and more. The
+default is \code{FALSE}.}
+
+\item{\code{wait_}}{If \code{FALSE}, return a \code{\link[promises:promise]{promises::promise()}} of a new
+\code{ChromoteSession} object. Otherwise, block during initialization, and
+return a \code{ChromoteSession} object directly.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Invisibly returns the previous viewport dimensions so that you
+can restore the viewport size, if desired.
 }
 }
 \if{html}{\out{<hr>}}
@@ -550,6 +658,53 @@ Resolved \code{auto_events} value.
 For internal use only.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{ChromoteSession$get_auto_events()}\if{html}{\out{</div>}}
+}
+
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ChromoteSession-auto_events_enable_args"></a>}}
+\if{latex}{\out{\hypertarget{method-ChromoteSession-auto_events_enable_args}{}}}
+\subsection{Method \code{auto_events_enable_args()}}{
+Set or retrieve the \code{enable} command arguments for a domain. These
+arguments are used for the \code{enable} command that is called for a domain,
+e.g. \code{Fetch$enable()}, when accessing an event method.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ChromoteSession$auto_events_enable_args(domain, ...)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{domain}}{A command domain, e.g. \code{"Fetch"}.}
+
+\item{\code{...}}{Arguments to use for auto-events for the domain. If not
+provided, returns the argument values currently in place for the
+domain. Use \code{NULL} to clear the enable arguments for a domain.}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Examples}{
+\if{html}{\out{<div class="r example copy">}}
+\preformatted{if (interactive()) {
+  b <- ChromoteSession$new(
+    auto_events_enable_args = list(
+      Fetch = list(handleAuthRequests = TRUE)
+    )
+  )
+
+  # Get current `Fetch.enable` args
+  b$auto_events_enable_args("Fetch")
+
+  # Update the `Fetch.enable` args
+  b$auto_events_enable_args("Fetch", handleAuthRequests = FALSE)
+
+  # Reset `Fetch.enable` args
+  b$auto_events_enable_args("Fetch", NULL)
+}
+
+}
+\if{html}{\out{</div>}}
+
 }
 
 }

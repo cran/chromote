@@ -134,6 +134,25 @@ Chromote <- R6Class(
       private$auto_events
     },
 
+    #' @description
+    #' Set or retrieve the `enable` command arguments for a domain. These
+    #' arguments are used for the `enable` command that is called for a domain,
+    #' e.g. `Fetch$enable()`, when accessing an event method.
+    #'
+    #' @param domain A command domain, e.g. `"Fetch"`.
+    #' @param ... Arguments to use for auto-events for the domain. If not
+    #'   provided, returns the argument values currently in place for the
+    #'   domain. Use `NULL` to clear the enable arguments for a domain.
+    auto_events_enable_args = function(domain, ...) {
+      dots <- dots_list(..., .named = TRUE)
+
+      if (length(dots) == 0) {
+        return(get_auto_events_enable_args(private, domain, self$parent))
+      }
+
+      set_auto_events_enable_args(self, private, domain, dots)
+    },
+
     # =========================================================================
     # Event loop, promises, and synchronization
     # =========================================================================
@@ -392,22 +411,47 @@ Chromote <- R6Class(
     },
 
     #' @description Close the [`Browser`] object
-    close = function() {
-      # Must be alive to be active so we cache value before closing process
-      is_active <- self$is_active()
-
-      if (self$is_alive()) {
-        if (is_active) {
-          # send a message to the browser requesting that it close
-          self$Browser$close()
-        } else {
-          # terminate the process
-          private$browser$close()
-        }
+    #' @param wait If an integer, waits a number of seconds for the process to
+    #'   exit, killing the process if it takes longer than `wait` seconds to
+    #'   close. Use `wait = TRUE` to wait for 10 seconds, or `wait = FALSE` to
+    #'   close the connection without waiting for the process to exit. Only
+    #'   applies when Chromote is connected to a local process.
+    close = function(wait = TRUE) {
+      if (!isFALSE(wait)) {
+        if (isTRUE(wait)) wait <- 10
+        check_number_whole(wait, min = 0)
       }
 
-      if (is_active) {
-        private$ws$close()
+      is_local <- private$browser$is_local()
+
+      if (!is_local || !self$is_alive()) {
+        # For remote connections or cases where the process is already closed,
+        # we just close the websocket. Note that we skip $is_active() because it
+        # requires $is_alive().
+        if (private$ws$readyState() %in% c(0L, 1L)) {
+          private$ws$close()
+        }
+        return(invisible())
+      }
+
+      # close the browser nicely, immediately close websocket
+      self$Browser$close(wait_ = FALSE)
+      try(private$ws$close(), silent = TRUE)
+
+      if (!isFALSE(wait)) {
+        # or close it forcefully if it takes too long
+        tryCatch(
+          {
+            private$browser$get_process()$wait(timeout = wait * 1000)
+            if (private$browser$get_process()$is_alive()) {
+              stop("shut it down") # ignored, used to escalate
+            }
+          },
+          error = function(err) {
+            try(private$ws$close(), silent = TRUE)
+            private$browser$close(wait = 1)
+          }
+        )
       }
 
       invisible()
@@ -611,11 +655,9 @@ cache_value <- function(fn) {
 # This should not change over time. Cache it
 is_inside_docker <- cache_value(function() {
   file.exists("/.dockerenv") ||
-    (
-      is_linux() &&
-        file.exists("/proc/self/cgroup") &&
-        any(grepl("docker", readLines("/proc/self/cgroup"), fixed = TRUE))
-    )
+    (is_linux() &&
+      file.exists("/proc/self/cgroup") &&
+      any(grepl("docker", readLines("/proc/self/cgroup"), fixed = TRUE)))
 })
 
 # This is a _fast_ function. Do not cache it.
