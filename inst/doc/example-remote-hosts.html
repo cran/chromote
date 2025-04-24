@@ -385,31 +385,15 @@ it which you can control as normal:</p>
 <span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a></span>
 <span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>b<span class="sc">$</span>Browser<span class="sc">$</span><span class="fu">getVersion</span>()</span>
 <span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">view</span>()</span>
-<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">navigate</span>(<span class="st">&quot;https://www.whatismybrowser.com/&quot;</span>)</span>
-<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">loadEventFired</span>()</span>
-<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">screenshot</span>(<span class="st">&quot;browser.png&quot;</span>)</span>
-<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">screenshot</span>(<span class="st">&quot;browser_string.png&quot;</span>, <span class="at">selector =</span> <span class="st">&quot;.string-major&quot;</span>)</span></code></pre></div>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">go_to</span>(<span class="st">&quot;https://www.whatismybrowser.com/&quot;</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">screenshot</span>(<span class="st">&quot;browser.png&quot;</span>)</span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">screenshot</span>(<span class="st">&quot;browser_string.png&quot;</span>, <span class="at">selector =</span> <span class="st">&quot;.string-major&quot;</span>)</span></code></pre></div>
 <p>When you use <code>$view()</code> on the remote browser, your local
 browser may block scripts for security reasons, which means that you
 won’t be able to view the remote browser. If your local browser is
 Chrome, there will be a shield-shaped icon in the location bar that you
 can click in order to enable loading the scripts. (Note: Some browsers
 don’t seem to work at all with the viewer.)</p>
-<p><strong>Technical note:</strong> There seem to be some timing issues
-with remote browsers. In the example above, the browser may finish
-navigating to the web site before the R process receives the response
-message for <code>$navigate()</code>, and therefore before R starts
-waiting for <code>Page.loadEventFired</code>. In order to avoid these
-timing problems, it is better to write code like this:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>{</span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  p <span class="ot">&lt;-</span> b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">loadEventFired</span>(<span class="at">wait_ =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>  b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">navigate</span>(<span class="st">&quot;https://www.whatismybrowser.com/&quot;</span>, <span class="at">wait_ =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  b<span class="sc">$</span><span class="fu">wait_for</span>(p)</span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>}</span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">screenshot</span>(<span class="st">&quot;browser.png&quot;</span>)</span></code></pre></div>
-<p>This tells it to fire off the <code>Page.navigate</code> command and
-<em>not</em> wait for it, and then immediately start waiting for
-<code>Page.loadEventFired</code> event.</p>
 
 
 

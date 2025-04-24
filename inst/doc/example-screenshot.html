@@ -349,19 +349,16 @@ This uses Chromote’s <code>$screenshot()</code> method, which wraps up
 many calls to the Chrome DevTools Protocol.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a>b <span class="ot">&lt;-</span> ChromoteSession<span class="sc">$</span><span class="fu">new</span>()</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co"># ==== Semi-synchronous version ====</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co"># ==== Synchronous version ====</span></span>
 <span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co"># Run the next two lines together, without any delay in between.</span></span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>p <span class="ot">&lt;-</span> b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">loadEventFired</span>(<span class="at">wait_ =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">navigate</span>(<span class="st">&quot;https://www.r-project.org/&quot;</span>, <span class="at">wait_ =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">wait_for</span>(p)</span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">screenshot</span>(<span class="at">show =</span> <span class="cn">TRUE</span>)  <span class="co"># Saves to screenshot.png and displays in viewer</span></span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a></span>
-<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a><span class="co"># ==== Async version ====</span></span>
-<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>p <span class="ot">&lt;-</span> b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">loadEventFired</span>(<span class="at">wait_ =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">navigate</span>(<span class="st">&quot;https://www.r-project.org/&quot;</span>, <span class="at">wait_ =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>p<span class="sc">$</span><span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
-<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>    b<span class="sc">$</span><span class="fu">screenshot</span>(<span class="at">show =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>  })</span></code></pre></div>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">go_to</span>(<span class="st">&quot;https://www.r-project.org/&quot;</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">screenshot</span>(<span class="at">show =</span> <span class="cn">TRUE</span>)  <span class="co"># Saves to screenshot.png and displays in viewer</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co"># ==== Async version ====</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">go_to</span>(<span class="st">&quot;https://www.r-project.org/&quot;</span>, <span class="at">wait_ =</span> <span class="cn">FALSE</span>)<span class="sc">$</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  <span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>    b<span class="sc">$</span><span class="fu">screenshot</span>(<span class="at">show =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  })</span></code></pre></div>
 <p>It is also possible to use selectors to specify what to screenshot,
 as well as the region (“content”, “border”, “padding”, or “margin”).</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Using CSS selectors, choosing the region, and using scaling</span></span>
@@ -379,7 +376,7 @@ elements, all of them will be in the screenshot region.</p>
 1323 pixels. You can set the width and height when it is created:</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>b <span class="ot">&lt;-</span> ChromoteSession<span class="sc">$</span><span class="fu">new</span>(<span class="at">width =</span> <span class="dv">390</span>, <span class="at">height =</span> <span class="dv">844</span>)</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a></span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">navigate</span>(<span class="st">&quot;https://www.r-project.org/&quot;</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">go_to</span>(<span class="st">&quot;https://www.r-project.org/&quot;</span>)</span>
 <span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">screenshot</span>(<span class="st">&quot;narrow.png&quot;</span>)</span></code></pre></div>
 <p>With an existing <code>ChromoteSession</code>, you can set the size
 with <code>b$set_viewport_size()</code>:</p>
@@ -398,7 +395,7 @@ UI.</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>b <span class="ot">&lt;-</span> ChromoteSession<span class="sc">$</span><span class="fu">new</span>()</span>
 <span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a></span>
 <span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">view</span>()</span>
-<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">navigate</span>(<span class="st">&quot;https://www.google.com&quot;</span>) <span class="co"># Or just type the URL in the navigation bar</span></span></code></pre></div>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">go_to</span>(<span class="st">&quot;https://www.google.com&quot;</span>) <span class="co"># Or just type the URL in the navigation bar</span></span></code></pre></div>
 <p>At this point, you can interact with the web page by typing in text
 and clicking on things.</p>
 <p>Then take a screenshot:</p>
@@ -426,32 +423,31 @@ multiple websites in parallel.</p>
 <span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a>  }</span>
 <span id="cb9-17"><a href="#cb9-17" tabindex="-1"></a></span>
 <span id="cb9-18"><a href="#cb9-18" tabindex="-1"></a>  b <span class="ot">&lt;-</span> ChromoteSession<span class="sc">$</span><span class="fu">new</span>()</span>
-<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a>  p <span class="ot">&lt;-</span> b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">loadEventFired</span>(<span class="at">wait_ =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a>  b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">navigate</span>(url, <span class="at">wait_ =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a>  p<span class="sc">$</span><span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
-<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a>      b<span class="sc">$</span><span class="fu">screenshot</span>(filename, <span class="at">wait_ =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a>    })<span class="sc">$</span></span>
-<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a>    <span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
-<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a>      <span class="fu">message</span>(filename)</span>
-<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a>    })<span class="sc">$</span></span>
-<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a>    <span class="fu">finally</span>(<span class="cf">function</span>() {</span>
-<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a>      b<span class="sc">$</span><span class="fu">close</span>()</span>
-<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a>    })</span>
-<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a>}</span>
-<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a></span>
-<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a><span class="co"># Screenshot multiple simultaneously</span></span>
-<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a>ps <span class="ot">&lt;-</span> <span class="fu">lapply</span>(urls, screenshot_p)</span>
-<span id="cb9-34"><a href="#cb9-34" tabindex="-1"></a>pa <span class="ot">&lt;-</span> <span class="fu">promise_all</span>(<span class="at">.list =</span> ps)<span class="sc">$</span><span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
-<span id="cb9-35"><a href="#cb9-35" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">&quot;Done!&quot;</span>)</span>
-<span id="cb9-36"><a href="#cb9-36" tabindex="-1"></a>})</span>
-<span id="cb9-37"><a href="#cb9-37" tabindex="-1"></a></span>
-<span id="cb9-38"><a href="#cb9-38" tabindex="-1"></a><span class="co"># Block the console until the screenshots finish (optional)</span></span>
-<span id="cb9-39"><a href="#cb9-39" tabindex="-1"></a>cm <span class="ot">&lt;-</span> <span class="fu">default_chromote_object</span>()</span>
-<span id="cb9-40"><a href="#cb9-40" tabindex="-1"></a>cm<span class="sc">$</span><span class="fu">wait_for</span>(pa)</span>
-<span id="cb9-41"><a href="#cb9-41" tabindex="-1"></a><span class="co">#&gt; www_r-project_org.png</span></span>
-<span id="cb9-42"><a href="#cb9-42" tabindex="-1"></a><span class="co">#&gt; github_com.png</span></span>
-<span id="cb9-43"><a href="#cb9-43" tabindex="-1"></a><span class="co">#&gt; news_ycombinator_com.png</span></span>
-<span id="cb9-44"><a href="#cb9-44" tabindex="-1"></a><span class="co">#&gt; Done!</span></span></code></pre></div>
+<span id="cb9-19"><a href="#cb9-19" tabindex="-1"></a>  b<span class="sc">$</span><span class="fu">go_to</span>(url, <span class="at">wait_ =</span> <span class="cn">FALSE</span>)<span class="sc">$</span></span>
+<span id="cb9-20"><a href="#cb9-20" tabindex="-1"></a>    <span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
+<span id="cb9-21"><a href="#cb9-21" tabindex="-1"></a>      b<span class="sc">$</span><span class="fu">screenshot</span>(filename, <span class="at">wait_ =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb9-22"><a href="#cb9-22" tabindex="-1"></a>    })<span class="sc">$</span></span>
+<span id="cb9-23"><a href="#cb9-23" tabindex="-1"></a>    <span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
+<span id="cb9-24"><a href="#cb9-24" tabindex="-1"></a>      <span class="fu">message</span>(filename)</span>
+<span id="cb9-25"><a href="#cb9-25" tabindex="-1"></a>    })<span class="sc">$</span></span>
+<span id="cb9-26"><a href="#cb9-26" tabindex="-1"></a>    <span class="fu">finally</span>(<span class="cf">function</span>() {</span>
+<span id="cb9-27"><a href="#cb9-27" tabindex="-1"></a>      b<span class="sc">$</span><span class="fu">close</span>()</span>
+<span id="cb9-28"><a href="#cb9-28" tabindex="-1"></a>    })</span>
+<span id="cb9-29"><a href="#cb9-29" tabindex="-1"></a>}</span>
+<span id="cb9-30"><a href="#cb9-30" tabindex="-1"></a></span>
+<span id="cb9-31"><a href="#cb9-31" tabindex="-1"></a><span class="co"># Screenshot multiple simultaneously</span></span>
+<span id="cb9-32"><a href="#cb9-32" tabindex="-1"></a>ps <span class="ot">&lt;-</span> <span class="fu">lapply</span>(urls, screenshot_p)</span>
+<span id="cb9-33"><a href="#cb9-33" tabindex="-1"></a>pa <span class="ot">&lt;-</span> <span class="fu">promise_all</span>(<span class="at">.list =</span> ps)<span class="sc">$</span><span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
+<span id="cb9-34"><a href="#cb9-34" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">&quot;Done!&quot;</span>)</span>
+<span id="cb9-35"><a href="#cb9-35" tabindex="-1"></a>})</span>
+<span id="cb9-36"><a href="#cb9-36" tabindex="-1"></a></span>
+<span id="cb9-37"><a href="#cb9-37" tabindex="-1"></a><span class="co"># Block the console until the screenshots finish (optional)</span></span>
+<span id="cb9-38"><a href="#cb9-38" tabindex="-1"></a>cm <span class="ot">&lt;-</span> <span class="fu">default_chromote_object</span>()</span>
+<span id="cb9-39"><a href="#cb9-39" tabindex="-1"></a>cm<span class="sc">$</span><span class="fu">wait_for</span>(pa)</span>
+<span id="cb9-40"><a href="#cb9-40" tabindex="-1"></a><span class="co">#&gt; www_r-project_org.png</span></span>
+<span id="cb9-41"><a href="#cb9-41" tabindex="-1"></a><span class="co">#&gt; github_com.png</span></span>
+<span id="cb9-42"><a href="#cb9-42" tabindex="-1"></a><span class="co">#&gt; news_ycombinator_com.png</span></span>
+<span id="cb9-43"><a href="#cb9-43" tabindex="-1"></a><span class="co">#&gt; Done!</span></span></code></pre></div>
 </div>
 
 

@@ -1,3 +1,11 @@
+# chromote 0.5.1
+
+## New features
+
+* `ChromoteSession` gets a new helper method, `$go_to()`. This is an easier way of reliably waiting for a page load, instead of using `Page$loadEventFired()` and `Page$navigate()` together. (#221)
+
+* `ChromoteSession$view()` now accommodates the new DevTools Frontend URL used by Chrome v135 and later (#225, #226).
+
 # chromote 0.5.0
 
 ## New features

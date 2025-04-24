@@ -350,7 +350,7 @@ JavaScript code that does it.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(chromote)</span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>b <span class="ot">&lt;-</span> ChromoteSession<span class="sc">$</span><span class="fu">new</span>()</span>
 <span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a></span>
-<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">navigate</span>(<span class="st">&quot;https://www.whatismybrowser.com/&quot;</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">go_to</span>(<span class="st">&quot;https://www.whatismybrowser.com/&quot;</span>)</span>
 <span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a></span>
 <span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="co"># Run JavaScript to extract text from the page</span></span>
 <span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>x <span class="ot">&lt;-</span> b<span class="sc">$</span>Runtime<span class="sc">$</span><span class="fu">evaluate</span>(<span class="st">&#39;document.querySelector(&quot;.corset .string-major a&quot;).innerText&#39;</span>)</span>
@@ -363,7 +363,7 @@ JavaScript code that does it.</p>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a>b <span class="ot">&lt;-</span> ChromoteSession<span class="sc">$</span><span class="fu">new</span>()</span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
 <span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>p <span class="ot">&lt;-</span> b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">loadEventFired</span>(<span class="at">wait_ =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">navigate</span>(<span class="st">&quot;https://www.whatismybrowser.com/&quot;</span>, <span class="at">wait_ =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">go_to</span>(<span class="st">&quot;https://www.whatismybrowser.com/&quot;</span>, <span class="at">wait_ =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>p<span class="sc">$</span><span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
 <span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>  b<span class="sc">$</span>Runtime<span class="sc">$</span><span class="fu">evaluate</span>(</span>
 <span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>    <span class="st">&#39;document.querySelector(&quot;.corset .string-major a&quot;).innerText&#39;</span></span>
@@ -374,8 +374,8 @@ JavaScript code that does it.</p>
 <span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>})</span></code></pre></div>
 </div>
 </div>
-<div id="using-chrome-devtools-procotol-commands" class="section level2">
-<h2>Using Chrome DevTools Procotol commands</h2>
+<div id="using-chrome-devtools-protocol-commands" class="section level2">
+<h2>Using Chrome DevTools Protocol commands</h2>
 <p>Another way is to use CDP commands to extract content from the DOM.
 This does not require executing JavaScript in the browser’s context, but
 it is also not as flexible as JavaScript.</p>
@@ -384,7 +384,7 @@ it is also not as flexible as JavaScript.</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">library</span>(chromote)</span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>b <span class="ot">&lt;-</span> ChromoteSession<span class="sc">$</span><span class="fu">new</span>()</span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">navigate</span>(<span class="st">&quot;https://www.whatismybrowser.com/&quot;</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">go_to</span>(<span class="st">&quot;https://www.whatismybrowser.com/&quot;</span>)</span>
 <span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>x <span class="ot">&lt;-</span> b<span class="sc">$</span>DOM<span class="sc">$</span><span class="fu">getDocument</span>()</span>
 <span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>x <span class="ot">&lt;-</span> b<span class="sc">$</span>DOM<span class="sc">$</span><span class="fu">querySelector</span>(x<span class="sc">$</span>root<span class="sc">$</span>nodeId, <span class="st">&quot;.corset .string-major a&quot;</span>)</span>
 <span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>b<span class="sc">$</span>DOM<span class="sc">$</span><span class="fu">getOuterHTML</span>(x<span class="sc">$</span>nodeId)</span>
@@ -396,20 +396,19 @@ it is also not as flexible as JavaScript.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">library</span>(chromote)</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>b <span class="ot">&lt;-</span> ChromoteSession<span class="sc">$</span><span class="fu">new</span>()</span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a></span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>p <span class="ot">&lt;-</span> b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">loadEventFired</span>(<span class="at">wait_ =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>b<span class="sc">$</span>Page<span class="sc">$</span><span class="fu">navigate</span>(<span class="st">&quot;https://www.whatismybrowser.com/&quot;</span>, <span class="at">wait_ =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>p<span class="sc">$</span><span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  b<span class="sc">$</span>DOM<span class="sc">$</span><span class="fu">getDocument</span>()</span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>})<span class="sc">$</span></span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>  b<span class="sc">$</span>DOM<span class="sc">$</span><span class="fu">querySelector</span>(value<span class="sc">$</span>root<span class="sc">$</span>nodeId, <span class="st">&quot;.corset .string-major a&quot;</span>)</span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>})<span class="sc">$</span></span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>  b<span class="sc">$</span>DOM<span class="sc">$</span><span class="fu">getOuterHTML</span>(value<span class="sc">$</span>nodeId)</span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>})<span class="sc">$</span></span>
-<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
-<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>  <span class="fu">print</span>(value)</span>
-<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>})</span></code></pre></div>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">go_to</span>(<span class="st">&quot;https://www.whatismybrowser.com/&quot;</span>, <span class="at">wait_ =</span> <span class="cn">FALSE</span>)<span class="sc">$</span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  b<span class="sc">$</span>DOM<span class="sc">$</span><span class="fu">getDocument</span>()</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>})<span class="sc">$</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  b<span class="sc">$</span>DOM<span class="sc">$</span><span class="fu">querySelector</span>(value<span class="sc">$</span>root<span class="sc">$</span>nodeId, <span class="st">&quot;.corset .string-major a&quot;</span>)</span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>})<span class="sc">$</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  b<span class="sc">$</span>DOM<span class="sc">$</span><span class="fu">getOuterHTML</span>(value<span class="sc">$</span>nodeId)</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>})<span class="sc">$</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a>  <span class="fu">print</span>(value)</span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>})</span></code></pre></div>
 </div>
 </div>
 

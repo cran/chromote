@@ -341,6 +341,9 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 
 
 
+<p>This document explains why you should use the convenience method
+<code>$go_to()</code> instead of the lower-level Chrome Devtools
+Protocol command <code>Page$navigate()</code>.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(chromote)</span>
 <span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a>b <span class="ot">&lt;-</span> ChromoteSession<span class="sc">$</span><span class="fu">new</span>()</span></code></pre></div>
 <p>In many cases, the commands <code>Page$navigate()</code> and then
@@ -378,7 +381,20 @@ that you want to write subsequent code with the synchronous API.</p>
 <span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>p<span class="sc">$</span><span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
 <span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  b<span class="sc">$</span><span class="fu">screenshot</span>(<span class="st">&quot;browser.png&quot;</span>, <span class="at">wait_ =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>})</span></code></pre></div>
-<p>This is explained in more detail in
+<p>This method of calling <code>Page$loadEventFired()</code> before
+<code>Page$navigate()</code> is essentially what the
+<code>$go_to()</code> convenience method does. It can also operate in
+synchronous and asynchronous modes.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co"># Synchronous API</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">go_to</span>(<span class="st">&quot;https://www.r-project.org/&quot;</span>)</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">screenshot</span>(<span class="st">&quot;browser.png&quot;</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="co"># Asynchronous API</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>b<span class="sc">$</span><span class="fu">go_to</span>(<span class="st">&quot;https://www.r-project.org/&quot;</span>, <span class="at">wait_ =</span> <span class="cn">FALSE</span>)<span class="sc">$</span></span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a><span class="fu">then</span>(<span class="cf">function</span>(value) {</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  b<span class="sc">$</span><span class="fu">screenshot</span>(<span class="st">&quot;browser.png&quot;</span>)</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>})</span></code></pre></div>
+<p>The synchronous and asynchronous APIs are explained in more detail in
 <code>vignette(&quot;sync-async&quot;)</code>.</p>
 
 
